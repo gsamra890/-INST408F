@@ -1,0 +1,93 @@
+---
+title: "Coronavirus Exploratory Data Analysis Report"
+author: "Gagandeep Samra"
+date: "3/22/2021"
+output: html_document
+---
+
+## Introduction 
+Coronavirus is an infectious disease that began in 2019. It can spread by having close contact with the person who has the symptom through the respiratory droplet. According to the CDC website, the symptoms are fever, cough, tiredness, shortness of breath, fatigue, headaches, etc. Some ways to prevent getting the Coronvirus are wearing a mask to cover the mouth and nose when going outside and be 6 feet apart from other people. Another thing to avoid large gatherings or crowds. Also, people can wash their hands with soap and water or use hand sanitizer. According to the Worldometer website, the current number of cases worldwide is 123,409,813, and the current deaths are 2,721,187. 
+ 
+## Set Up Libraries
+In this step, I install the packages needed to carry out my analysis.
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(readxl)
+```
+
+## Data Cleaning/Preparation
+In this step, the Coronavirus and Comorbidity data are read in. The Coronavirus data contains the list of patients with coronavirus cases of their age, sex, dob, ethnicity, first and last name, where they live, and if they have the Coronavirus and died from it. The Comorbidity data contains health conditions that might relate to seeing if their condition worsens from the Coronavirus symptom. Once importing the dataset, merge the data using inner join by using ID column because it is in both datasets while naming the new data frame 'merged_id_df.' Then, clean the dataset by re-coded ages values greater than or equal to 120 to be NA. The ages are greater than 120, which is not reasonable in this dataset. To clean the dataset more further, the Country column contains 'Mainland China' and 'China,' so re-coded to be 'China.'
+```{r results='hide', message=FALSE, warning=FALSE}
+# import data
+coronavirus_df <- read_excel("coronavirus.xlsx", sheet = "patients")
+comorbid_df <- read_excel("comorbidity.xlsx", sheet = "disease")
+
+# Looking at the data
+str(coronavirus_df)
+str(comorbid_df)
+
+# Merge the data
+merged_id_df <- inner_join(coronavirus_df, comorbid_df, by ='ID')
+merged_id_df
+
+# Number of observation
+summary(coronavirus_df)
+summary(merged_id_df)
+
+# Re-code ages greater than 120 to NA
+merged_id_df <- mutate(merged_id_df,  Age = ifelse(Age >= 120, NA, Age))
+
+
+# Re-code Mainland China to China
+merged_id_df<- mutate(merged_id_df, Country = ifelse(Country == "Mainland China", "China", Country))
+
+```
+
+# Exploratory Data Analysis
+The exploratory data analysis helps analyze the trends of patients. The dataset consisted of 1,764 observations and 12 variables. Within the observation, 49.9% of patients in this dataset were female. The median age of patients who have Coronavirus is 28. The mean age is 28.4, and the standard deviation of patients who died from coronavirus is 15.9. Among patients with Coronavirus, China has 51.3%, Italy has 0.5%, and the US has 10.0%, which is a total of 61.7%. Patients who have coronavirus associates with Heart Disease (3.9%), HIV (7.5%), Liver Disease (1.9%), Lupus (15.3%), and none (71.3%) by looking at the comorbidities column.
+```{r results='hide', message=FALSE, warning=FALSE}
+# Number of observation
+summary(merged_id_df)
+
+ncol(merged_id_df)
+#Percentage of patients are female
+round(prop.table(table(merged_id_df$Sex))*100,2)
+
+# Median age of patients who have coronavirus
+median(merged_id_df$Age[merged_id_df$CoronaVirus==1], na.rm = T) 
+
+# Mean age and standard deviation of patients who died from coronavirus
+mean(merged_id_df$Age[merged_id_df$Death=='1'], na.rm = T)
+sd(merged_id_df$Age[merged_id_df$Death=='1'], na.rm = T)
+
+# China, Italy, and the US have coronavirus
+round(prop.table(table(merged_id_df$Country[merged_id_df$CoronaVirus==1]))*100,2)
+
+# Comorbidities (with percentages) associated with patients who have coronavirus
+round(prop.table(table(merged_id_df$Comorbidity[merged_id_df$CoronaVirus==1]))*100,2)
+
+
+```
+
+## Data Visualization 
+The boxplot was created using the ggplot2 library, which focuses on which age has coronavirus in red color or does not have coronavirus in blue color. The x-axis represents people who have coronavirus and not have Coronavirus. The y-axis represents different ages in years. It looks like people who have Coronavirus is more spread out within the range of 15-44, while people ages 18-42 are less spread out. In the visualization, patients who have Coronavirus are lower than patients who do not have it.
+```{r warning= FALSE}
+# Factor the variables
+factor_df <-merged_id_df
+
+factor_df$CoronaVirus <- as.factor(factor_df$CoronaVirus)
+
+# Boxplot
+pl <- ggplot(factor_df, aes(x = CoronaVirus, y = Age)) + geom_boxplot() 
+
+pl + geom_boxplot(aes(fill=CoronaVirus)) + 
+  ylab("Age (in Years)") + ggtitle("Age by Coronavirus Diagnosis") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Reference 
+COVID-19 and Your Health.(2020, February 11).Centers for Disease Control and Prevention. https://www.cdc.gov/coronavirus/2019-ncov/transmission/index.html
+
+Coronavirus Cases.(n.d.).Retrieved from https://www.worldometers.info/coronavirus/
+
